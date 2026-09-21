@@ -8,8 +8,8 @@ Black-box Source Composition Analysis (SCA) for Android and iOS mobile applicati
 
 | Platform | Input | Component identity | Source |
 |---|---|---|---|
-| Android | flat text file, one `group:artifact@version` per line | Maven PURL `pkg:maven/{group}/{artifact}@{version}` | [MobSF](https://mobsf.github.io/docs/) SBOM analysis |
-| iOS | flat text file, one `name@version@bundle_identifier` per line | CocoaPods PURL `pkg:cocoapods/{name}@{version}` | `extract_packages_from_app_bundle.py` |
+| Android | flat text file, one `group:artifact@version` per line | Maven PURL `pkg:maven/{group}/{artifact}@{version}` | `extract_packages_from_apk.py`, or [MobSF](https://mobsf.github.io/docs/) SBOM analysis |
+| iOS | flat text file, one `name@version@bundle_identifier` per line | CocoaPods PURL `pkg:cocoapods/{name}@{version}` | `extract_packages_from_ipa.py` |
 
 Both platforms are resolved through the same Sonatype OSS Index `component-report` API, which returns known vulnerabilities (CVE id, CVSS score, references) per component.
 
@@ -18,7 +18,7 @@ Both platforms are resolved through the same Sonatype OSS Index `component-repor
 - Python >= 3.13
 - [`uv`](https://docs.astral.sh/uv/)
 - A free [Sonatype OSS Index](https://ossindex.sonatype.org/) account (username + API key)
-
+    - Generate the API Key there: [Settings > User Tokens](https://guide.sonatype.com/settings/tokens)
 ## Setup
 
 ```bash
@@ -29,6 +29,20 @@ uv sync
 
 ### Android
 
+Two ways to produce the input file:
+
+**Option A — `extract_packages_from_apk.py` (fast, no MobSF required)**
+
+Reads build-system-embedded dependency metadata from the APK: `META-INF/<group>_<artifact>.version` files (written by AGP for every third-party dependency since it's also used by the Play Console SDK index — the dominant marker in modern release APKs) and `META-INF/maven/*/*/pom.properties` files (older Maven/Gradle publishing convention, less common in current Android builds). Best-effort: only dependencies that embed one of these markers are found (some builds strip `META-INF` entries via `packagingOptions`, or disable dependency metadata via `android.dependenciesInfo`), so coverage may be partial — fall back to Option B for a more complete (if manual) list.
+
+```bash
+uv run python extract_packages_from_apk.py /path/to/app.apk > android_components.txt
+```
+
+It also accepts an already-extracted APK directory instead of the raw `.apk` file.
+
+**Option B — MobSF SBOM analysis**
+
 1. Run MobSF against the target APK and export the SBOM.
 2. Reduce it to a flat file of `group:artifact@version` lines, e.g.:
 
@@ -37,23 +51,25 @@ uv sync
    com.google.guava:guava@31.1-jre
    ```
 
-3. Run:
+Then, either way, run:
 
-   ```bash
-   uv run python main.py \
-     -f android_components.txt \
-     -o results.json \
-     -p android \
-     --username <sonatype-username> \
-     --api-key <sonatype-api-key>
-   ```
+```bash
+uv run python main.py \
+  -f android_components.txt \
+  -o results.json \
+  -p android \
+  --username <sonatype-username> \
+  --api-key <sonatype-api-key>
+```
 
 ### iOS
 
-1. Extract the `.ipa`, then run the bundle extraction helper (OS-independent — parses `Info.plist` files directly via `plistlib`, no macOS `plutil` dependency) against the extracted app directory:
+1. Run the extraction helper (OS-independent — parses `Info.plist` files directly via `plistlib`/`zipfile`, no macOS `plutil` dependency) against the `.ipa` directly, or against an already-extracted app directory:
 
    ```bash
-   uv run python extract_packages_from_app_bundle.py /path/to/Payload/App.app > ios_components.txt
+   uv run python extract_packages_from_ipa.py /path/to/App.ipa > ios_components.txt
+   # or:
+   uv run python extract_packages_from_ipa.py /path/to/Payload/App.app > ios_components.txt
    ```
 
 2. Run:

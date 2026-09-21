@@ -184,8 +184,9 @@ if __name__ == "__main__":
         dest="packages_list",
         required=True,
         type=str,
-        help="For --platform ios, use output from extract_packages_from_app_bundle.sh. "
-        "For --platform android, use a flat file of group:artifact@version lines from MobSF SBOM analysis.",
+        help="For --platform ios, use output from extract_packages_from_ipa.py. "
+        "For --platform android, use output from extract_packages_from_apk.py, or a flat file of "
+        "group:artifact@version lines from MobSF SBOM analysis.",
     )
     parser.add_argument("-o", "--output", dest="output", required=True, type=str)
     parser.add_argument(
