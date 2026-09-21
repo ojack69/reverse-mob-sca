@@ -1,6 +1,6 @@
 This tool performs a "black-box" Source Composition Analysis for Android/iOS mobile applications by reversing their components and enumerating their versions. Note: this may introduce some false positives, specially when it's not possible to determine a component version reliably.
 
-- main.py: Unified entrypoint for both platforms, queries the Sonatype OSS Index `component-report` API (requires a free API key) for known CVEs.
+- main.py: Unified entrypoint for both platforms, queries the Sonatype OSS Index `component-report` API (requires a free API key) for known CVEs. Credentials are read from the `SONATYPE_USERNAME`/`SONATYPE_API_KEY` environment variables (not CLI flags).
   - `--platform android`: expects a flat file of `group:artifact@version` lines, from `extract_packages_from_apk.py` or MobSF SBOM analysis; queried as Maven PURLs (`pkg:maven/{group}/{artifact}@{version}`).
   - `--platform ios`: expects the output of `extract_packages_from_ipa.py` (`name@version@bundle_identifier` lines); queried as CocoaPods PURLs (`pkg:cocoapods/{name}@{version}`).
 - extract_packages_from_ipa.py: OS-independent helper (uses `plistlib`/`zipfile`, no macOS `plutil` dependency) that reads `Info.plist` files from a raw `.ipa` or an extracted `.app`/`.ipa` bundle directory, to produce main.py's iOS input format. Replaces an earlier bash version that only worked on macOS.

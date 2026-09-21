@@ -19,10 +19,13 @@ Both platforms are resolved through the same Sonatype OSS Index `component-repor
 - [`uv`](https://docs.astral.sh/uv/)
 - A free [Sonatype OSS Index](https://ossindex.sonatype.org/) account (username + API key)
     - Generate the API Key there: [Settings > User Tokens](https://guide.sonatype.com/settings/tokens)
+
 ## Setup
 
 ```bash
 uv sync
+export SONATYPE_USERNAME=<sonatype-username>
+export SONATYPE_API_KEY=<sonatype-api-key>
 ```
 
 ## Usage
@@ -57,9 +60,7 @@ Then, either way, run:
 uv run python main.py \
   -f android_components.txt \
   -o results.json \
-  -p android \
-  --username <sonatype-username> \
-  --api-key <sonatype-api-key>
+  -p android
 ```
 
 ### iOS
@@ -78,9 +79,7 @@ uv run python main.py \
    uv run python main.py \
      -f ios_components.txt \
      -o results.json \
-     -p ios \
-     --username <sonatype-username> \
-     --api-key <sonatype-api-key>
+     -p ios
    ```
 
 ## Options
@@ -90,10 +89,15 @@ uv run python main.py \
 | `-f`, `--file` | yes | Input file (format depends on `--platform`, see above) |
 | `-o`, `--output` | yes | Path to write JSON results |
 | `-p`, `--platform` | yes | `android` or `ios` |
-| `--username` | yes | Sonatype OSS Index account username/email |
-| `--api-key` | yes | Sonatype OSS Index API key |
 | `--proxy` | no | Route requests through a proxy (e.g. `http://localhost:8080`) for interception/debugging; disables TLS certificate verification |
 | `-v`, `--verbose` | no | Enable debug logging |
+
+Sonatype credentials are read from environment variables, not flags:
+
+| Variable | Required | Description |
+|---|---|---|
+| `SONATYPE_USERNAME` | yes | Sonatype OSS Index account username/email |
+| `SONATYPE_API_KEY` | yes | Sonatype OSS Index API key |
 
 ## Output
 

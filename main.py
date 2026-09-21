@@ -197,8 +197,6 @@ if __name__ == "__main__":
         choices=["android", "ios"],
         type=str,
     )
-    parser.add_argument("--username", dest="username", required=True, type=str)
-    parser.add_argument("--api-key", dest="api_key", required=True, type=str)
     parser.add_argument(
         "--proxy",
         dest="proxy",
@@ -226,9 +224,13 @@ if __name__ == "__main__":
     packages_list = args.packages_list
     output = args.output
     platform = args.platform
-    username = args.username
-    api_key = args.api_key
     proxy = args.proxy
+
+    username = os.environ.get("SONATYPE_USERNAME")
+    api_key = os.environ.get("SONATYPE_API_KEY")
+    if not username or not api_key:
+        logger.error("SONATYPE_USERNAME and SONATYPE_API_KEY environment variables must be set")
+        sys.exit(1)
 
     if not os.path.exists(packages_list):
         logger.error("File does not exist: %s", packages_list)
