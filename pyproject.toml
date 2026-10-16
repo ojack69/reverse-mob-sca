@@ -1,9 +1,17 @@
 [project]
-name = "mobile-sca"
+name = "reverse-mob-sca"
 version = "0.1.0"
-description = "Add your description here"
+description = "Black-box Source Composition Analysis for Android/iOS apps: extract third-party components from APK/IPA and query Sonatype OSS Index for known CVEs"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "cvss>=3.6",
     "requests>=2.32.5",
 ]
+
+[project.scripts]
+reverse-mob-sca = "reverse_mob_sca.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.13"]
+build-backend = "uv_build"
