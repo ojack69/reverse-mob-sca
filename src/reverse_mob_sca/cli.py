@@ -9,6 +9,7 @@ from reverse_mob_sca.extract import extract_packages
 from reverse_mob_sca.net import make_session
 from reverse_mob_sca.sources import osv, sonatype
 from reverse_mob_sca.validate import component_key, validate_entries
+from reverse_mob_sca.xlsx import write_xlsx
 
 logger = logging.getLogger("mobile-sca")
 
@@ -63,8 +64,17 @@ def build_parser():
         "--output",
         dest="output",
         type=str,
-        help="Path to write JSON results (required unless --extract-only). "
-        "With --extract-only, path to write the component list (default: stdout).",
+        help="Path to write results (required unless --extract-only), as JSON or Excel "
+        "(see --format). With --extract-only, path to write the component list (default: stdout).",
+    )
+    parser.add_argument(
+        "--format",
+        dest="format",
+        choices=["json", "xlsx"],
+        default=None,
+        help="Results format (default: xlsx if --output ends in .xlsx, json otherwise). "
+        "xlsx writes a 'Components' sheet (one row per component) and a 'Vulnerabilities' "
+        "sheet (one row per component/vulnerability). Ignored with --extract-only.",
     )
     parser.add_argument(
         "-s",
@@ -322,9 +332,13 @@ def main():
 
     data = build_results(entries, platform, results, descendants)
 
+    fmt = args.format or ("xlsx" if args.output.lower().endswith(".xlsx") else "json")
     try:
-        with open(args.output, "w") as f:
-            json.dump(data, f, indent=4)
+        if fmt == "xlsx":
+            write_xlsx(data, args.output)
+        else:
+            with open(args.output, "w") as f:
+                json.dump(data, f, indent=4)
     except OSError as e:
         logger.error("Failed to write output to %s: %s", args.output, e)
         sys.exit(1)

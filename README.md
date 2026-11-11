@@ -136,7 +136,8 @@ uv run reverse-mob-sca -p android -f android_components.txt -o results.json
 | `-p`, `--platform` | yes | `android` or `ios` |
 | `-a`, `--app` | one of `-a`/`-f` | Raw `.apk`/`.ipa` or extracted app directory to extract components from |
 | `-f`, `--file` | one of `-a`/`-f` | Pre-built component list (format depends on `--platform`, see above) |
-| `-o`, `--output` | yes, unless `--extract-only` | Path to write JSON results; with `--extract-only`, path to write the component list (default: stdout) |
+| `-o`, `--output` | yes, unless `--extract-only` | Path to write results (JSON or Excel, see `--format`); with `--extract-only`, path to write the component list (default: stdout) |
+| `--format` | no | `json` or `xlsx` (default: `xlsx` if `-o` ends in `.xlsx`, `json` otherwise); ignored with `--extract-only` |
 | `-s`, `--sources` | no | Comma-separated advisory sources: `sonatype`, `osv` (default: both; iOS: `sonatype` only) |
 | `-t`, `--transitive` | no | Also resolve child dependencies: deps.dev on Android (versions as declared upstream), CocoaPods Trunk podspecs on iOS (constraints only; see above) |
 | `--extract-only` | no | Only extract the component list from `-a` (plus children with `-t`) and write it out, without querying advisory sources |
@@ -188,6 +189,8 @@ Sonatype credentials are read from environment variables, not flags (only needed
 - `sources`: which sources returned a result for the component (empty if every source failed for it).
 - `cve`: the CVE id when one exists, otherwise the source's own id (e.g. a GHSA id); other ids are in `aliases`.
 - `dependency_vulnerabilities`: vulnerable descendants of the component (only populated with `-t`).
+
+With `--format xlsx` (or `-o results.xlsx`) the same data is written as a workbook with two sheets: **Components** (one row per component, with vulnerability count, max severity/CVSS, IDs and the dependency rollup) and **Vulnerabilities** (one row per component/vulnerability, sorted by CVSS descending). List fields are newline-joined within a cell; headers are frozen and filterable, severities color-coded. Every text cell is written as a literal string, so advisory text beginning with `=` can't be evaluated as a formula.
 
 `bundle_identifier` is only populated for `--platform ios` (taken from the extracted `Info.plist` or the input file; `null` if absent); it's always `null` for Android.
 
