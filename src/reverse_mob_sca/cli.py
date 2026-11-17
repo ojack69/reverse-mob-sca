@@ -6,6 +6,7 @@ import sys
 
 from reverse_mob_sca import cocoapods, depsdev
 from reverse_mob_sca.extract import extract_packages
+from reverse_mob_sca.graph import dot_available, transitive_closure, write_graphs
 from reverse_mob_sca.net import make_session
 from reverse_mob_sca.sources import osv, sonatype
 from reverse_mob_sca.validate import component_key, validate_entries
@@ -75,6 +76,18 @@ def build_parser():
         help="Results format (default: xlsx if --output ends in .xlsx, json otherwise). "
         "xlsx writes a 'Components' sheet (one row per component) and a 'Vulnerabilities' "
         "sheet (one row per component/vulnerability). Ignored with --extract-only.",
+    )
+    parser.add_argument(
+        "-g",
+        "--graphs",
+        dest="graphs",
+        type=str,
+        default=None,
+        metavar="DIR",
+        help="Also render dependency graphs as PNG into DIR (requires Graphviz 'dot' in PATH): "
+        "one graph per vulnerable dependency tree, showing only vulnerable components, the "
+        "paths leading to them and their vulnerabilities. Edges are only available with "
+        "--transitive; without it each vulnerable component gets a standalone graph.",
     )
     parser.add_argument(
         "-s",
@@ -265,6 +278,8 @@ def main():
         parser.error("--extract-only requires -a/--app")
     if not args.extract_only and not args.output:
         parser.error("-o/--output is required unless --extract-only is set")
+    if args.graphs and args.extract_only:
+        parser.error("--graphs can't be used with --extract-only")
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -283,6 +298,10 @@ def main():
             logger.error("SONATYPE_USERNAME and SONATYPE_API_KEY environment variables must be set")
             sys.exit(1)
 
+    if args.graphs and not dot_available():
+        logger.error("--graphs requires Graphviz: 'dot' not found in PATH")
+        sys.exit(1)
+
     lines, source = load_lines(args)
     if not lines:
         logger.error("No components found in %s", source)
@@ -300,10 +319,10 @@ def main():
 
     session = make_session(args.proxy)
 
-    descendants = {}
+    edges = {}
     if transitive:
         resolver = depsdev if platform == "android" else cocoapods
-        entries, descendants = resolver.resolve(session, entries)
+        entries, edges = resolver.resolve(session, entries)
 
     queryable = [e for e in entries if e["resolved"]]
 
@@ -330,7 +349,7 @@ def main():
     except KeyboardInterrupt:
         logger.warning("Interrupted by user, writing partial results to %s", args.output)
 
-    data = build_results(entries, platform, results, descendants)
+    data = build_results(entries, platform, results, transitive_closure(edges))
 
     fmt = args.format or ("xlsx" if args.output.lower().endswith(".xlsx") else "json")
     try:
@@ -345,6 +364,13 @@ def main():
 
     vulnerable = sum(1 for c in data if c["vulnerabilities"])
     logger.info("Wrote %d results (%d vulnerable) to %s", len(data), vulnerable, args.output)
+
+    if args.graphs:
+        try:
+            write_graphs(data, edges, args.graphs)
+        except Exception as e:  # graphviz.ExecutableNotFound/CalledProcessError, OSError
+            logger.error("Failed to render graphs into %s: %s", args.graphs, e)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

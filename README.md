@@ -138,6 +138,7 @@ uv run reverse-mob-sca -p android -f android_components.txt -o results.json
 | `-f`, `--file` | one of `-a`/`-f` | Pre-built component list (format depends on `--platform`, see above) |
 | `-o`, `--output` | yes, unless `--extract-only` | Path to write results (JSON or Excel, see `--format`); with `--extract-only`, path to write the component list (default: stdout) |
 | `--format` | no | `json` or `xlsx` (default: `xlsx` if `-o` ends in `.xlsx`, `json` otherwise); ignored with `--extract-only` |
+| `-g`, `--graphs DIR` | no | Also render dependency graphs as PNG into `DIR` (requires Graphviz `dot` in `PATH`), vulnerable components only; see [Graphs](#graphs) |
 | `-s`, `--sources` | no | Comma-separated advisory sources: `sonatype`, `osv` (default: both; iOS: `sonatype` only) |
 | `-t`, `--transitive` | no | Also resolve child dependencies: deps.dev on Android (versions as declared upstream), CocoaPods Trunk podspecs on iOS (constraints only; see above) |
 | `--extract-only` | no | Only extract the component list from `-a` (plus children with `-t`) and write it out, without querying advisory sources |
@@ -191,6 +192,15 @@ Sonatype credentials are read from environment variables, not flags (only needed
 - `dependency_vulnerabilities`: vulnerable descendants of the component (only populated with `-t`).
 
 With `--format xlsx` (or `-o results.xlsx`) the same data is written as a workbook with two sheets: **Components** (one row per component, with vulnerability count, max severity/CVSS, IDs and the dependency rollup) and **Vulnerabilities** (one row per component/vulnerability, sorted by CVSS descending). List fields are newline-joined within a cell; headers are frozen and filterable, severities color-coded. Every text cell is written as a literal string, so advisory text beginning with `=` can't be evaluated as a formula.
+
+### Graphs
+
+With `-g DIR`, one PNG per vulnerable dependency tree is written to `DIR` (named `<name>_<version>.png` after the tree's root, requires the Graphviz `dot` binary). Only vulnerable components and the dependency paths leading to them are drawn: a component is kept if it has vulnerabilities or transitively depends on one that does. Each graph is rooted at a kept component no other kept component depends on and contains all its kept descendants (shared subtrees repeat across graphs).
+
+- Component nodes: filled by their own max severity (white = only a path to vulnerable children); dashed border = not observed in the app (`direct`/`indirect`, version as declared upstream); bold border = graph root.
+- Each vulnerable component has an attached table of its vulnerabilities (ID, CVSS, severity), sorted by CVSS descending and capped at 20 rows.
+- Every PNG carries a legend (bottom-left) explaining severity fills, border styles and edges.
+- Edges come from `-t` resolution (deps.dev / CocoaPods Trunk); without `-t` every vulnerable component gets a standalone graph. iOS unresolved children never appear (never queried).
 
 `bundle_identifier` is only populated for `--platform ios` (taken from the extracted `Info.plist` or the input file; `null` if absent); it's always `null` for Android.
 

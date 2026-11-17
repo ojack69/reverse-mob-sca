@@ -11,33 +11,15 @@ logger = logging.getLogger("mobile-sca")
 DEPENDENCIES_URL = "https://api.deps.dev/v3/systems/maven/packages/{}/versions/{}:dependencies"
 
 
-def _descendants(nodes: list, edges: list):
-    """Map node index -> set of all transitively reachable node indexes."""
-    children = {}
-    for edge in edges:
-        children.setdefault(edge["fromNode"], set()).add(edge["toNode"])
-
-    result = {}
-    for start in range(len(nodes)):
-        seen, stack = set(), list(children.get(start, ()))
-        while stack:
-            node = stack.pop()
-            if node not in seen:
-                seen.add(node)
-                stack.extend(children.get(node, ()))
-        result[start] = seen
-    return result
-
-
 def resolve(session, entries: list):
     """Expand Android entries with their transitive dependencies as declared by deps.dev.
 
-    Returns (entries, descendants) where descendants maps a component key to the set of
-    component keys it (transitively) pulls in. Versions of non-observed children are
+    Returns (entries, edges) where edges maps a component key to the set of component
+    keys it directly depends on (union of the per-root resolved graphs). Versions of non-observed children are
     taken as declared in the resolved graph, so they may differ from what actually ships.
     """
     by_key = {component_key(e["name"], e["version"]): e for e in entries}
-    descendants = {}
+    edges = {}
 
     roots = list(by_key.values())
     for idx, root in enumerate(roots, 1):
@@ -78,10 +60,12 @@ def resolve(session, entries: list):
                 child["relation"] = relation
             child["via"].add(root["name"])
 
-        for node_idx, reachable in _descendants(nodes, graph.get("edges", [])).items():
-            if reachable:
-                descendants.setdefault(keys[node_idx], set()).update(keys[i] for i in reachable)
+        for edge in graph.get("edges", []):
+            parent, child = keys[edge["fromNode"]], keys[edge["toNode"]]
+            # Skip edges touching nodes rejected by validation
+            if parent in by_key and child in by_key and parent != child:
+                edges.setdefault(parent, set()).add(child)
 
     added = len(by_key) - len(roots)
     logger.info("Resolved %d additional transitive components via deps.dev", added)
-    return list(by_key.values()), descendants
+    return list(by_key.values()), edges

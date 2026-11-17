@@ -5,14 +5,7 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-SEVERITY_ORDER = ["Critical", "High", "Medium", "Low", "Informational", "Unknown"]
-SEVERITY_FILL = {
-    "Critical": "C00000",
-    "High": "FF0000",
-    "Medium": "FFC000",
-    "Low": "92D050",
-    "Informational": "BDD7EE",
-}
+from reverse_mob_sca.severity import SEVERITY_FILL, max_severity
 MAX_COL_WIDTH = 80
 
 
@@ -55,11 +48,6 @@ def _finalize(ws, severity_col=None):
                 row[0].fill = PatternFill("solid", start_color=color)
 
 
-def _max_severity(vulns):
-    labels = {v["severity"] for v in vulns}
-    return next((s for s in SEVERITY_ORDER if s in labels), None)
-
-
 def write_xlsx(data: list, path: str):
     ios = any(c["platform"] == "ios" for c in data)
     wb = Workbook()
@@ -79,7 +67,7 @@ def write_xlsx(data: list, path: str):
         scores = [v["cvssScore"] for v in vulns if v["cvssScore"] is not None]
         row = [
             c["name"], c["version"], c["bundle_identifier"], c["resolved"], c["relation"], c["via"],
-            c["sources"], len(vulns), _max_severity(vulns), max(scores) if scores else None,
+            c["sources"], len(vulns), max_severity(vulns), max(scores) if scores else None,
             [v["cve"] for v in vulns],
             [f"{d['name']}@{d['version']}: {', '.join(d['ids'])}" for d in c["dependency_vulnerabilities"]],
             c["description"], c["reference"],

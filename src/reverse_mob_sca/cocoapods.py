@@ -192,7 +192,7 @@ def resolve(session, entries: list):
     Podspecs only declare version constraints, so a child's version is known only when
     the child itself was observed in the app; other declared children are returned as
     unresolved entries (version None) carrying their requirements, and are not recursed.
-    Returns (entries, descendants) like depsdev.resolve.
+    Returns (entries, edges) like depsdev.resolve.
     """
     observed = {}
     for entry in entries:
@@ -270,16 +270,6 @@ def resolve(session, entries: list):
             ", ".join(sorted(child["via"])),
         )
 
-    descendants = {}
-    for start in edges:
-        seen, stack = set(), list(edges[start])
-        while stack:
-            node = stack.pop()
-            if node not in seen:
-                seen.add(node)
-                stack.extend(edges.get(node, ()))
-        descendants[start] = seen
-
     for entry in entries:
         entry.pop("pod", None)
 
@@ -288,7 +278,7 @@ def resolve(session, entries: list):
         sum(len(c) for c in edges.values()),
         len(unresolved),
     )
-    return entries + list(unresolved.values()), descendants
+    return entries + list(unresolved.values()), edges
 
 
 def _check_requirements(child: dict, parent: str, reqs: list):

@@ -5,6 +5,15 @@ from cvss.exceptions import CVSSError
 
 logger = logging.getLogger("mobile-sca")
 
+SEVERITY_ORDER = ["Critical", "High", "Medium", "Low", "Informational", "Unknown"]
+SEVERITY_FILL = {
+    "Critical": "C00000",
+    "High": "FF0000",
+    "Medium": "FFC000",
+    "Low": "92D050",
+    "Informational": "BDD7EE",
+}
+
 # GHSA qualitative labels, used when no parsable CVSS vector is available
 _GHSA_LABELS = {
     "LOW": "Low",
@@ -46,3 +55,8 @@ def score_from_vector(vector: str):
 
 def severity_from_label(label: str):
     return _GHSA_LABELS.get((label or "").upper(), "Unknown")
+
+
+def max_severity(vulns: list):
+    labels = {v["severity"] for v in vulns}
+    return next((s for s in SEVERITY_ORDER if s in labels), None)
