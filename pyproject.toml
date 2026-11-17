@@ -1,6 +1,6 @@
 [project]
 name = "reverse-mob-sca"
-version = "0.1.0"
+version = "0.2.0"
 description = "Black-box Source Composition Analysis for Android/iOS apps: extract third-party components from APK/IPA and query Sonatype OSS Index for known CVEs"
 readme = "README.md"
 requires-python = ">=3.13"
